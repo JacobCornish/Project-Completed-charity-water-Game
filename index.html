@@ -253,6 +253,7 @@ html, body {
 
 .btn-row    { display: flex; justify-content: center; flex-wrap: wrap; }
 .best-label { font-size: 11px; color: rgba(255,255,255,0.2); margin-top: 10px; }
+.active-diff { background: rgba(255,201,7,0.18) !important; border-color: rgba(255,201,7,0.5) !important; color: var(--yellow) !important; }
 
 #mute-btn {
   position: absolute;
@@ -345,11 +346,7 @@ html, body {
     <div class="hud-stats">
       <div class="stat-pill yellow" id="score-pill">0 Helped</div>
       <div class="stat-pill teal"   id="cross-pill">Cross 1</div>
-      <div id="lives-wrap">
-        <span class="heart" id="h1">❤️</span>
-        <span class="heart" id="h2">❤️</span>
-        <span class="heart" id="h3">❤️</span>
-      </div>
+      <div id="lives-wrap"></div>
     </div>
   </div>
 
@@ -372,6 +369,15 @@ html, body {
           <div class="ov-how-row"><div class="ov-dot"></div><div class="ov-how-text">Land on a yellow jerry can floating in the river for a +5 bonus ✨</div></div>
           <div class="ov-how-row"><div class="ov-dot"></div><div class="ov-how-text">Trucks and polluted water cost a life — you have 3 total</div></div>
           <div class="ov-how-row"><div class="ov-dot"></div><div class="ov-how-text">Reach the village row to complete a crossing — 10 crossings wins!</div></div>
+        </div>
+        <div style="margin-bottom:10px;">
+          <div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:2px;margin-bottom:7px;">Difficulty</div>
+          <div class="btn-row" id="diff-row">
+            <button class="btn btn-secondary diff-btn active-diff" id="diff-easy"   onclick="setDiff('easy')">🌿 Easy</button>
+            <button class="btn btn-secondary diff-btn"             id="diff-normal" onclick="setDiff('normal')">💧 Normal</button>
+            <button class="btn btn-secondary diff-btn"             id="diff-hard"   onclick="setDiff('hard')">🔥 Hard</button>
+          </div>
+          <div id="diff-desc" style="font-size:11px;color:rgba(255,201,7,0.65);margin-top:6px;min-height:16px;">Slower traffic · 5 lives · 15 crossings to win</div>
         </div>
         <button class="btn btn-primary" onclick="startGame()">🚀 BEGIN JOURNEY</button>
         <div class="best-label" id="start-best">Best: 0 People Helped</div>
@@ -427,6 +433,14 @@ html, body {
   </div>
 
 </div>
+
+<footer style="width:100%;max-width:540px;margin:0 auto;background:rgba(0,0,0,0.5);border-top:1px solid rgba(255,201,7,0.15);padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:18px;flex-shrink:0;font-size:11px;font-family:'Nunito',sans-serif;">
+  <span style="color:rgba(255,255,255,0.3);">Made with 💧 for</span>
+  <a href="https://www.charitywater.org" target="_blank" style="color:var(--yellow);text-decoration:none;font-weight:800;letter-spacing:0.3px;" onmouseover="this.style.opacity=0.75" onmouseout="this.style.opacity=1">charity: water</a>
+  <a href="https://www.charitywater.org/donate" target="_blank" style="background:var(--yellow);color:#0B1D2E;padding:4px 12px;border-radius:20px;font-weight:800;text-decoration:none;" onmouseover="this.style.opacity=0.85" onmouseout="this.style.opacity=1">💛 Donate</a>
+  <a href="https://www.charitywater.org/our-projects" target="_blank" style="color:rgba(0,194,203,0.9);text-decoration:none;font-weight:700;" onmouseover="this.style.opacity=0.75" onmouseout="this.style.opacity=1">Our Projects</a>
+</footer>
+
 <script>
 const canvas   = document.getElementById('game-canvas');
 const ctx      = canvas.getContext('2d');
@@ -562,6 +576,19 @@ function stopBGM() {
 let gameState = 'start';
 let score     = 0;
 let bestScore = parseInt(localStorage.getItem('cw_best') || '0');
+let difficulty = 'easy';
+const DIFF = {
+  easy:   { speedMult:0.75, lives:5, crossingsToWin:15, desc:"Slower traffic · 5 lives · 15 crossings to win" },
+  normal: { speedMult:1.0,  lives:3, crossingsToWin:10, desc:"Standard speed · 3 lives · 10 crossings to win" },
+  hard:   { speedMult:1.45, lives:1, crossingsToWin:8,  desc:"Fast traffic · 1 life · 8 crossings to win" },
+};
+
+function setDiff(d) {
+  difficulty = d;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active-diff'));
+  document.getElementById('diff-' + d).classList.add('active-diff');
+  document.getElementById('diff-desc').textContent = DIFF[d].desc;
+}
 let lives     = 3;
 let crossing  = 1;
 let animId    = null;
@@ -636,7 +663,7 @@ function rrect(x, y, w, h, r) {
 function buildLanes() {
   lanes = [];
   celebrationFlags = [];
-  const spd    = 1.0 + (crossing - 1) * 0.18;
+  const spd    = DIFF[difficulty].speedMult * (1.0 + (crossing - 1) * 0.18);
   const extras = Math.min(crossing - 1, 4);
 
   lanes.push(makeSafe(C.green2, C.green));
@@ -892,7 +919,7 @@ function onLand() {
     for (const obj of lane.obs) {
       if (playerOnFloat(obj)) {
         onFloat = true;
-        if (obj.type === 'jerry') collectJerry(obj);
+        if (obj.type === 'jerry') { collectJerry(obj, lane); }
         spawnSplash(player.x, player.y + PLAYER_SIZE * 0.2, 'rgba(100,180,255,0.8)', 10);
         spawnRipple(player.x, player.y + PLAYER_SIZE * 0.3);
         break;
@@ -918,7 +945,7 @@ function completeCrossing() {
   showBanner('Crossing complete! +10 People Helped 💧');
   playCrossing();
 
-  if (crossing > 10) {
+  if (crossing > DIFF[difficulty].crossingsToWin) {
     launchConfetti();
     playWin();
     setTimeout(() => showGameOver(true), 700);
@@ -933,9 +960,8 @@ function completeCrossing() {
   }, 450);
 }
 
-function collectJerry(obj) {
-  obj.type = 'log';
-  obj.w    = CELL * 2.4;
+function collectJerry(obj, lane) {
+  if (lane) lane.obs = lane.obs.filter(o => o !== obj);
   score   += 5;
   updateHUD();
   doFlash(C.yellow, 180);
@@ -992,9 +1018,15 @@ function updateHUD() {
   pill.textContent = score + ' Helped';
   pill.classList.add('pop');
   setTimeout(() => pill.classList.remove('pop'), 240);
-  document.getElementById('cross-pill').textContent = 'Cross ' + crossing;
-  for (let i = 1; i <= 3; i++) {
-    document.getElementById('h' + i).className = 'heart' + (i <= lives ? '' : ' empty');
+  document.getElementById('cross-pill').textContent = 'Cross ' + crossing + '/' + DIFF[difficulty].crossingsToWin;
+  const maxLives = DIFF[difficulty].lives;
+  const wrap = document.getElementById('lives-wrap');
+  wrap.innerHTML = '';
+  for (let i = 1; i <= maxLives; i++) {
+    const s = document.createElement('span');
+    s.className = 'heart' + (i <= lives ? '' : ' empty');
+    s.textContent = '❤️';
+    wrap.appendChild(s);
   }
 }
 
@@ -1566,7 +1598,7 @@ function startGame() {
   document.getElementById('gameover-screen').classList.add('hidden');
 
   score      = 0;
-  lives      = 3;
+  lives      = DIFF[difficulty].lives;
   crossing   = 1;
   invincible = false;
   invTimer   = 0;
