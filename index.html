@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Droplet's Journey | charity: water</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Righteous&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --yellow:  #FFC907;
+  --yellow2: #E6B400;
+  --blue:    #1A73E8;
+  --teal:    #00C2CB;
+  --dark:    #0B1D2E;
+  --green:   #3DAA5C;
+  --green2:  #2D7A46;
+  --red:     #E74C3C;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--dark);
+  font-family: 'Nunito', sans-serif;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* HUD */
+#hud {
+  width: 100%;
+  max-width: 540px;
+  background: rgba(0,0,0,0.6);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+  border-bottom: 2px solid rgba(255,201,7,0.3);
+  z-index: 10;
+}
+.hud-logo {
+  font-family: 'Righteous', sans-serif;
+  font-size: clamp(10px, 2.4vw, 14px);
+  color: var(--yellow);
+  white-space: nowrap;
+}
+.hud-logo span { color: rgba(255,255,255,0.45); font-size: 0.78em; }
+#cw-logo {
+  height: 28px;
+  width: auto;
+  vertical-align: middle;
+  margin-left: 6px;
+  filter: invert(1) brightness(2);
+  opacity: 0.9;
+}
+.hud-stats { display: flex; align-items: center; gap: 8px; }
+.stat-pill {
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: clamp(10px, 2vw, 13px);
+  font-weight: 800;
+  white-space: nowrap;
+  transition: transform 0.15s;
+}
+.stat-pill.yellow { background: var(--yellow); color: var(--dark); }
+.stat-pill.teal   { background: var(--teal);   color: var(--dark); }
+.stat-pill.pop    { transform: scale(1.3); }
+#lives-wrap { display: flex; gap: 5px; align-items: center; }
+.heart {
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--red);
+  transition: background 0.25s;
+}
+.heart.empty { background: rgba(255,255,255,0.15); }
+
+/* GAME AREA */
+#game-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 540px;
+  flex: 1;
+  overflow: hidden;
+  background: var(--dark);
+}
+#game-canvas { display: block; width: 100%; height: 100%; }
+
+/* MILESTONE BANNER */
+#milestone-banner {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  background: var(--yellow);
+  color: var(--dark);
+  text-align: center;
+  font-family: 'Righteous', sans-serif;
+  font-size: 13px;
+  padding: 8px 16px;
+  z-index: 45;
+  transform: translateY(-100%);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+#milestone-banner.show { transform: translateY(0); }
+
+/* FLASH */
+#flash {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 30;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+/* OVERLAYS */
+.overlay {
+  position: absolute; inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 20px;
+  background: rgba(11,29,46,0.8);
+}
+.overlay.hidden { display: none; }
+.overlay-card {
+  background: #0d2235;
+  border: 2px solid rgba(255,201,7,0.4);
+  border-radius: 20px;
+  padding: 26px 22px;
+  max-width: 320px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+}
+.ov-logo {
+  font-family: 'Righteous', sans-serif;
+  font-size: 21px;
+  color: var(--yellow);
+  margin-bottom: 2px;
+}
+.ov-sub {
+  font-size: 10px;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+.ov-title {
+  font-family: 'Righteous', sans-serif;
+  font-size: 22px;
+  color: white;
+  margin-bottom: 6px;
+}
+.ov-desc {
+  font-size: 12px;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+.ov-impact {
+  background: rgba(0,194,203,0.1);
+  border: 1px solid rgba(0,194,203,0.3);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.ov-impact-num {
+  font-family: 'Righteous', sans-serif;
+  font-size: 44px;
+  color: var(--teal);
+  line-height: 1;
+}
+.ov-impact-label { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 4px; }
+.ov-fact {
+  font-size: 11px;
+  color: rgba(255,201,7,0.75);
+  margin-bottom: 14px;
+  font-style: italic;
+  line-height: 1.5;
+}
+.ov-how { text-align: left; margin-bottom: 14px; }
+.ov-how h4 {
+  font-size: 10px; color: rgba(255,255,255,0.28);
+  text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;
+}
+.ov-how-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 7px; }
+.ov-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--yellow); flex-shrink: 0; margin-top: 4px;
+}
+.ov-how-text { font-size: 12px; color: rgba(255,255,255,0.65); line-height: 1.4; }
+.btn {
+  display: inline-block; border: none; border-radius: 100px;
+  font-family: 'Nunito', sans-serif; font-weight: 800;
+  cursor: pointer; transition: transform 0.1s, opacity 0.1s;
+  text-decoration: none; text-align: center;
+}
+.btn:hover { transform: translateY(-2px); opacity: 0.9; }
+.btn:active { transform: scale(0.95); }
+.btn-primary {
+  background: var(--yellow); color: var(--dark);
+  font-size: 15px; padding: 12px 28px;
+  display: block; width: 100%; margin-bottom: 9px;
+  box-shadow: 0 4px 18px rgba(255,201,7,0.4);
+}
+.btn-secondary {
+  background: rgba(255,255,255,0.09); color: white;
+  font-size: 12px; padding: 8px 14px;
+  border: 1px solid rgba(255,255,255,0.1); margin: 3px;
+}
+.btn-row { display: flex; justify-content: center; flex-wrap: wrap; }
+.best-label { font-size: 11px; color: rgba(255,255,255,0.22); margin-top: 10px; }
+
+/* CONFETTI */
+.confetti-piece {
+  position: absolute; pointer-events: none; z-index: 60;
+  animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+  0%   { opacity:1; transform: translateY(0) rotate(0deg); }
+  100% { opacity:0; transform: translateY(650px) rotate(580deg); }
+}
+
+/* FACT TICKER */
+#fact-bar {
+  width: 100%; max-width: 540px;
+  background: rgba(255,201,7,0.07);
+  border-top: 1px solid rgba(255,201,7,0.18);
+  padding: 5px 12px;
+  font-size: clamp(9px, 1.8vw, 11px);
+  color: rgba(255,220,80,0.85);
+  font-weight: 600;
+  overflow: hidden; white-space: nowrap; flex-shrink: 0;
+}
+#fact-text { display: inline-block; animation: ticker 32s linear infinite; }
+@keyframes ticker {
+  0%   { transform: translateX(105vw); }
+  100% { transform: translateX(-100%); }
+}
+
+/* D-PAD */
+#dpad {
+  width: 100%; max-width: 540px;
+  display: flex; justify-content: center; align-items: center;
+  padding: 8px 0 10px; flex-shrink: 0;
+  background: rgba(0,0,0,0.35); gap: 4px;
+}
+.dpad-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.dpad-btn {
+  width: 54px; height: 54px; border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.8);
+  font-size: 20px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.1s, transform 0.08s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation; user-select: none;
+}
+.dpad-btn:active, .dpad-btn.pressed {
+  background: var(--yellow); color: var(--dark); transform: scale(0.9);
+}
+.dpad-center { width: 54px; height: 54px; }
+
+@media (min-width: 541px) { #app { padding-top: 16px; } }
+@media (min-width: 800px) and (pointer: fine) { #dpad { display: none; } }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-logo">DROPLET'S JOURNEY <img id="cw-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA+oAAAIDCAYAAACTouQsAAAACXBIWXMAAC4jAAAuIwF4pT92AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAGABJREFUeNrs3UuOG8kVQFGT4AY00dgGPNb+16FxA91jTWoJNApwtctEUcxPfN57cQ5gGLC7JTIyMjNuBot1ud/v/wAAiOrt5/dui5VvP35djDAA0VyEOgCZAi1CWEV9XSJdsAMg1AFgSpjNiKo9wSj6ckW6YweAUAeABkE2KqhmxCLzCXYAhDoAAj1gTIl0sW4UAJjhZggAyBboXiOj5sDvYv1xjgh7AFq5GgIARoZPywDe+meJblrOsWfz2DwDoBU76gBMC56of5/gwrwAYCY/ow5A+rh5/Mjxs79zy0eTxRit5yMA7GVHHYC0gb7n7xXpAEAWfkYdgPSR/urvE+lUnv8ACHUACBspR/9uYQUAROKj7wCkD/Tf/f1+XhgAyMaOOgDpI33V1w4ACHUAKEWk04NPcQBwlo++A7Bk7Ip0BDoAUdlRB6C0r4JcpNM60EU6AC3ZUQdg6WiHs5FuFABo7XK/W7MAIIBBqAMQhY++AwAc5CEVAD346DsAp73vKgqWc+MnbAGADz76DoAAE+jmi2MJQCA++g6AUDFe3j8ACHUAEKnGoc44+EQJAEIdAOGFOQMAQh0AEKY8Y1cdAKEOgBDFnAEAoQ4AwDN21QEQ6gAIlUTsHAMAQh0AAvEQw3EGAKEOwHB2jRG2ACDUAQBC8fABAKEOQCh21QWc8QAAoQ4A4hTHGQChDgDP2FUXca/ev5AFgK9d7nf3SADE6EwrPdRYcU54aAXAXjdDAIAgM1YAQBw++g6A8ATnAwCB+Og7AIIEBvAReAC2sqMOgEgHAAjEjjoAAh0GsasOwBZ21AEQ6QAAQh0AAAAQ6gA0YzcdnDcACHUAxAYAgFAHAAAAhDoAAAAIdQAAAECoAwAAAEIdAAAAhDoAAAAg1AEAAECoAwAAAEIdAAAAhDoAAAAg1AEAAECoAwAAAEIdAAAAhDoAAAAg1AEAAECoAwAAAEIdAAAAEOoAAAAg1AEAAAChDgAAAEIdAAAAEOoAAAAg1AEAAAChDgAAAEIdAAAAEOoAAAAg1AEAAAChDgAAAIu6GQIAqvj249fl8X97+/n9bmTMA/MAAKEOABOj7Kv/X6itPRc+/3/mAgDR+eg7AGUj/eg/S755YC4AINQBIFGkCzTMBQCEOgAEjSyBZi4AgFAHAAgY6SIfAKEOAEUCDwBAqAOAWMfxA0CoAwAAAEIdAAaxK+u4AYBQBwAQ6QAg1AFA+PHo7ef3u1EAQKgDgMDiIA9VABDqACAAAQCEOgBs0XpXXazH1vr4+FQGAEIdACAIkQ6AUAeAJMFlVz0mxwUAoQ4AUDTS7aYDINQBoDO76gCAUAcAGMBuOgBCHQCSsqsOAAh1AChOrNcaf7vpAAh1ABhMiAEAQh0Aise6XfU57KYDINQBAEQ6AAh1AOjBrjoAINQBABqwmw4AQh2AouyqAwBCHQCKE+u5xtduOgBCHQCCEWoAgFAHgOKxble9D7vpACDUAQCRDgBCHQBmsKsOAAh1AChOrMccR7vpAAh1AEhCwAEAQh0AirOrHmv8PIwBQKgDQDJCrm6kA4BQBwCxLjgLH1cAEOoAkJhYN14AINQB4AS7r44nAAh1ACjOLvGccRLpAAh1ACiiR+CJdeMDAEIdAFiW3XQAhDoACL2X7BobFwAQ6gAg1peLdLvpAAh1AAAAQKgDwAh21fuxmw4AQh0ASkeqSBfpAAh1AFhCrwBcNdZ9ogAAhDoAiNbi79duOgBCHQAW0zMEV4l1O+kAINQBQKwvEOl20wFYzc0QAMDYmK0UnnbRAUCoA0BX7xHdOz7F7b7jYRQAWI2PvgMAIh0AhDoACEQAAKEOAKTgYQkAQh0AEIoAgFAHAHjkIQkAQh0AEIwAgFAHAAAAhDoA7GJX3XgDgFAHAAAAoQ4AAAAIdQAAAECoAwDx+Pl0ABDqAAAAEM7NEADAWNV2jr/9+HVxVAFAqAOAQA/2vgQ7ALTho+8AINK9RwAQ6gAg0r1XAECoAwAAgFAHgHXZYQYAhDoAMJWHEwAg1AEAAECoAwAAAEIdAAAAhDoAAAAg1AEAAECoAwAAAEIdAAAAEOoAAAAg1AEAAAChDgAAAEIdAAAAEOoAAAAg1AEAAAChDgAAAEIdAAAAEOoAAAAg1AEAAAChDgAAAEIdAAAAEOoAAACAUAcAAAChDgAAAAh1AAAAEOoAwGq+/fh1MQoAINQBQLQCAEIdAOAzDyYAQKgDgHgFAIQ6ACDWH9+fBxIA0MbNEADA2Fh/+/n9Xu09AQBCHQDEbcFxqfQQAwCO8tF3AAAAEOoAAACAUAcAAAChDgAAAAh1AGjAF78ZbwAQ6gAAACDUAYBHdncBAKEOACzPAxIAhDoAIBYBAKEOAPCMByUACHUAQCQCAEIdAOAZD0wAWNXNEADA2Dh8+/n9bry2//mVxgsAhDoABFIxOD/ek91vAGjHR98B4L96xmb1XeGe789DAACEOgCIdJHufQKAUAcA8er9PmNXHQChDgAL6RWBq+4w21kHAKEOAGJ1gfdvVx0AoQ4AC+gRf3aUxToACHUAAAAQ6gCQm930/uyqA4BQBwCRvkCsA4BQBwAIxK46AEIdAETeb9k1Nj4AINQBQIQuPU521QEQ6gBQgLhzPAFAqANAYXbTjRcACHUAOKj17qvorHlcAUCoA4CYW4oHHAAg1AFAbBYfPw9iABDqAJCIiAMAhDoAFGY3PeY4eiADgFAHgAR8gRwAINQBADayqw4AQh2AhdhNF+sAINQBoGikAwAIdQAIxG56rvH1oAYAoQ4AgfjIOwAg1AEATrKrDgBCHYCC7KYDAEIdAKARu+oAINQBKMRuulgX6wAIdQAoGukAAEIdAAKxm15r/D3IAUCoA8BAPvIOAAh1AIDO7KoDINQBICG76QCAUAcAGMSuOgBCHQASsZsu1gFAqAMAJGdXHQChDgAJYsuubWyODwBCHQBEIIXZVQdAqAOAyOIkD1QAEOoAIP4ozAMfAIQ6AMBJHqwAINQBQPThuAGAUAcAAAChDgALsSvr+AGAUAcAkQcAINQBgJrOPnDxwAYAoQ4AAQJNnAEAQh0AgsS6SDcPzAUAhDoABIk0YWYemAsAZHEzBABUiLRvP35dRJl5YB4AINQBIFioYR4YBQCy89F3AAAAEOoAAACAUAcAAAChDgAAAAh1AAAAEOoAAACAUAcAAAChDgAAAAh1AAAAEOoAAACAUAcAAAChDgAAAAh1AAAAQKgDAACAUAcAAACEOgAAAAh1AAAAQKgDAACAUAcAAACEOgAAAAh1AAAAQKgDAACAUAcAAACEOgAAAAh1AAAAQKgDAAAAQh0AAACEOgDAir79+HUxCgAIdQAAABDqAAAAgFAHYAgf3wUAEOoAAKl5wAWAUAcAAAChDgDAI7vpAAh1AIQHAIBQBwDgkYdaAAh1AAQIAIBQB0CsA84PAIQ6AIBIB0CoA4AgAecEAL1c7ve7UQCgmbef391YEOkAINQBEOsg0AEQ6gAg2hHoAh0AoQ6AaAdxDoBQBwAAAAbwre8AAAAg1AEAAAChDgAAAEIdAAAAEOoAAAAg1AEAAAChDgAAAEIdAAAAEOoAAAAg1AEAAAChDgAAAEIdAAAAEOoAAACAUAcAAAChDgAAAAh1AAAAEOoAAACAUAcAAAChDgAAAAh1AAAAEOoAAACAUAcAAAChDgAAAAh1AAAAEOoAAACAUAcAAACEOgAAAAh1AAAAQKgDAACAUAcAAACEOgAAAAh1AAAAQKgDAACAUAcAAACEOgAAAAh1AAAAQKgDAACAUAcAAACEOgAAACDUAQAAQKgDAAAAQh0AAACEOgAAACDUAQAAQKgDAAAAQh0AAACEOgAAACDUAQAAQKgDAAAAQh0AAACEOgAAACDUAQAAAKEOAAAAQh0AAAAQ6gAAACDUAQAAAKEOAAAAQh0AAAAQ6gAAACDUAQAAAKEOAAAAQh0AAAAQ6gAAACDUAQAAAKEOAAAACHUAAAAQ6gAAAIBQBwAAAKEOAAAACHUAAAAQ6gAAAIBQBwAAAKEOAAAACHUAAAAQ6gAAAIBQBwAAAKEOAAAACHUAAABAqAMAAIBQBwAAAIQ6AAAACHUAAABAqAMAAIBQBwAAAIQ6AAAACHUAAABAqAMAAIBQBwAAAIQ6AAAACHUAAABAqAMAAABCHQAAAIQ6AAAAINQBAABAqAMAAABCHQAAAIQ6AAAAINQBAABAqAMAAABCHQAAAOq7GYKx/v3Pf93f//uPv/68GA3Id+46fwEAEOrFFvhA/vNXtAMAINRFORD0XH7/58Q6AABCXYQDwa4NYh0AgFZ8mRzAF+E94t8BAAChDgAAAEIdAAAA2MrPqO/w+WdQfcwVanJuAwAg1EU7AAAA/M1H3xtHO+B8BgAAoW5xDwAAgFAHAAAAhDpAZ0c+IeNTNQAACHWAILEu0gEAEOoFFvZAjXPaeQ8AQGt+PRvAxhD/+FWM4hwAAKEOECzaAQCgFx99BwAAAKEOAAAACHUAAAAIzs+oA/C3jy/Me+dn8gFwr4M57KgDAACAUAcgms87DAAACHUAAABAqAMAAKvw6TGEOgAAACDUAdjPDgMAgFAHAAAYxkNphDoAFi4AAAh1AACARx5KI9QBsHABAECoAwAAPPJQGqEOgIULALjXgVAHwMIFANzrqOJmCAAsXKDF/Pnjrz8vRghwr4Nkof54wrihG9NoF3Dj93q8WozR57HPPuYtx8Wihezz5/2fcR0Fa0P3O/On2pi0Goc9a+DL/X4Pd3JknhBb3/uR93hmXF2kzzOGY+Zu1uCN/LqPngtuzhydQ+YOWN9kGZtVr1cr91qWNXCzUO/15CrbJGgd6i7GMebhSuP4agz3vPcKgdjz4Vv0c0FsUeU8BuubtdfdrlV6LeMa+HSoj/xoSaWPlr56L73HtdpFadZHnKp8bLv1e85446zyZDnax/1ajkvG+02Fh61CXaS1fv0950bLsYowh2dc07Ocu5Hud9HHzIOenGvgW6aTY5WffRsxtpXG8uwi8sx4ZxrHVvPq1Xse9fdUilmoei8T65gbc9Y2Z/6MTN+9Qr8YPfLvRj23s66Bb73faOuPeFe+eIyOh+w3ylY/9/zV/7fnz3ZD6zeHLeYA3BeM2bz1jXtw/Xn07Bg//u9abfwa+DbygG/5d/ZMgpW+/KLXRy2yjmPvnxs+8jRx9RvaljlswQYiC8izvhHrdefR3uNq7oxfA2/+GfVRX6iU/Ztlj4zTs3/n6Hur/o2Xo7/cq8o3lvf8ub29v1d59nneIz4q/gjEKr9yLvL3IWT/GVkL/JjzfuRx2Xt/WPl8s77JPZ6VIz372GZdA28K9REHvMqFY+/EbR3plR56RLowiJvn7/HoIizqmFb/4qyqC7OMDyhnB4xQXzPYI11PV3pgYH0j1KtEevbxHbEGbrX+vUaLdDfYduPpuLQz4tcxjH4/n//TYw5nnX+ZX7tz1HuB6g8aKp5vM4PH9Wat86nl8Z71q6YzrIFbHYNrxEivFkUzIj3rDbPisa4YBll2AsE1xQMHY+z8MkddMx0bjTFiXFqP8dXJWPuGseJNqNd7rj6WLWJ9z5+x9Z+dNe4WcM597+H4a3L+ANSP4CrX+r2bxKPWwNczB9yN2EQHcxjzsM3CKvJr77EAwbV3ZmRU/JIr928iH+PKm8C9xveafRDtoGDhUXfuOzdwrua6VzlnzfmI51WF89y5hXvYemvgW68/vMWLX2HyjbjwrvT7q93I5syVM+P+1W9AcBypfM3LtpvuGmvOA3kjPVKzVfzd6j3XwNcjBzzSkwanKdS50EX7xnXXGIsdMOf7/9mjz0H3GSDS+ftsDXyd+aLO/F0+8m7B6mZn3KHCvHQOgXWNawSrzGsPx7e7Zhi0x99354Jl4e0mBmRcOFigIOacG5nXN65huIaOc3NYTAbjhuMBsJYePyua4Uvkot633E8xr4ztl6Hu6RgAFW+ie+5vvb/kJvOXyFFzzq/2eqCCvfc1I5bX7p9Rt6gAAKB1EPSOCmtYoHSog0UIkMXehfnI81w0sMJ9bdY8d882VpDdzckJbmCA6wg1RPm4uQdRrknMP27Ow9zsqMOTC+HHf4wG5A+XaAtYiycqBdurP2PPfO/1epxz/7++MRIQ/x7uW99h8ALdRQpcV6D39XnmvHN/cA0CzrOjjhuY3XNYIlwsbGHNsFz1wYG1DeRmRx0LgR03eTc84Ox1xm4jEefp0Xm59b44apd/9fv0kbWNcQOhDqluYhbTUIvf6Yz5PubvNfp5Ah0Q6uAGBqS7brS+Hri+sOq9dcT5t+InWKxvQKhD+ZuYGxjUN3KX0e492e6VZ++Dr/59n2qxtgGEOriJASHiBWZZPYwrnrvWNrAO3/pOyYX1lhvZ+03MjQws3kctpl1vqBKBe//Zo+fBiNcj0oGo7KjjBgbw4triukFWo3bVnSPWN0BbdtRxEwMQMdD8njvz76pwzu35PeiuMSDUwU0MWC6cfQQXET7v/FvxnNuztrG+AaEOaRcTbmJAlocCkG0OmuPzIt1ogVAHkQ4sHS9brjt206l+j50xx/e+nqz3fZ8SBIQ6Ih0AFtLrfnj0z3V/trYBhDpuZABNrhOr7OzB2XtwlnPauOKcpUyoO+CIdABwzx0Z1V+9nhXXpNY3sFCoO+GxYABW1usb4N1fqR555vjY9Y3xxhxYLNQNAS5iAOMW22COn38NftQEEOpgcQAU1/P3qkPF+2+rKF45rl1HgOah7sICAM/viXb2iKrq3HTO4RzWbdXcPg54xoP4+JpdpAFe3+DdtI0NZF3kVzlH974Pa1xYNNSPXmBcNAAQMGsuqD+/f+uBXM4+lOrxpXQeksE690v3jG2uWQfMBR2AHgFjFH5/7/34z5b/HZy31tTe//w579qcc4yuVd6QBw2MWJwaCZzTrBoMW+e4cwHnTp57jPPVOWN9FNfVAYd58y3aLpRzC2hxbXAtqbvIj7ZWFPjn1h+91zauBWv3k+PfMNSPXPAiHAAXaXrMyd43GBcv3NRrBYx5ADiniXy/0m3JQz36CR/54uLC5yZmjLxH/jd2q+2mWHw4f6rP2d5z3DnU95yyw13zXhf1vKn8q0tHHe9rqwM+4gX7XbUWS73f86uL7Z755mbIqufSV180JroB5+m8195qbZNp7dN7zRbpXhdtfWoN3DHUI8Z69APe4gQX9vPex5ZAr3ojqziHjce8BeKqD1SFPRDx3tRyA+LVa8h+/V8pLmc0W+S5EPXYX+73e/MX3vpARD/gZw/u6EVzxoVnj/ex9c98/Pf3vpYt//7ssY48h41HnPf46n1V/L3iR68TzgUPMKod55HHMtrryXZ+HR2/M+ubqNf/Fe91e97zqE2oypHe8729DPUzb+DsC496wHs/dTnz3iK/tshjvve9tn49kT4Cl3meGI85C5isN2eh3v/8EOpCXajnWd/0eC0RjlOrjsl0rzu7qdTy78o+NjPn/KZQHxnsUS/O0UIxy2vLeAy2vLeWr2XUWM76WE/ExZQvfVn7AUX1RYhQp/VxjnjPrzS3rG/c7yI/oMjWbJXWwLe9f9nsn9t001/X0fnXY36NeC2Q+ZxyrcYcwNyKsb6ZMV7RjtGK97vZ3eYecN71yKDPOuEdcHrMgY+5NePX1JjTVD2nVhkjX5QHRF/fWNv0eV0Z2mTGa9Rs7dzOTnYfnWTWhTbClz8cfVppXlPxnDK3MQ9yH7NIX3a64ifXoqxvzryODOG64r1uRLe57re362fUfyf7l2uRW4QvfFrpy29wLq04tx/HZsXz2XVuveMb7ct7V5tfEc65quf96hstHs4vFOpR4wmA9tdwi+V1710Vfw0fQh1zf/X7nQexi4U6AAgYAIB9roYAAEQ6ACDUAQAAAKEOAOfYTQcAhDoATLLar4cCAIQ6AAAAINQB4DVfIgcACHUAAABAqAPAFnbTAQChDgCT+BI5AECoA0BgdtMBAKEOAJPYTQcAhDoAAAAg1AHgkV/JBgAIdQAAAECoA8Aju+kAgFAHgMCRDgAwy80QACDQAQCEOgCEDnQfewcAhDoABAh0AAChDgDBAt1uOgAwky+TA0CkAwAIdQCIGel20wEAoQ4AQSIdAECoA0AgdtMBAKEOAB3YTQcAhDoAJGc3HQAQ6gAg0gEAhDoAwhsAQKgDgKgHANjkcr/7vh0Aavrdl8oJdAAgqv8IMACZF/hMGMmmpQAAAABJRU5ErkJggg==" alt="charity: water"></div>
+    <div class="hud-stats">
+      <div class="stat-pill yellow" id="score-pill">0 Helped</div>
+      <div class="stat-pill teal"   id="cross-pill">Cross 1</div>
+      <div id="lives-wrap">
+        <div class="heart" id="h1"></div>
+        <div class="heart" id="h2"></div>
+        <div class="heart" id="h3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME -->
+  <div id="game-wrap">
+    <canvas id="game-canvas"></canvas>
+    <div id="flash"></div>
+    <div id="milestone-banner">Crossing complete!</div>
+
+    <!-- START -->
+    <div class="overlay" id="start-screen">
+      <div class="overlay-card">
+        <div class="ov-logo">DROPLET'S JOURNEY</div>
+        <div class="ov-sub">by charity: water</div>
+        <div class="ov-title">Guide Drippy Home</div>
+        <div class="ov-desc">Cross polluted rivers, dodge pollution trucks, and deliver clean water to communities in need. Reach the village to complete each crossing.</div>
+        <div class="ov-how">
+          <h4>How to Play</h4>
+          <div class="ov-how-row"><div class="ov-dot"></div><div class="ov-how-text">Arrow keys / WASD on desktop — or use the D-pad below on mobile</div></div>
+          <div class="ov-how-row"><div class="ov-dot"></div><div class="ov-how-text">Land on a yellow jerry can floating in the river for a +5 bonus</div></div>
+          <div class="ov-how-row"><div class="ov-dot"></div><div class="ov-how-text">Trucks and the polluted river cost you a life — three lives total</div></div>
+          <div class="ov-how-row"><div class="ov-dot"></div><div class="ov-how-text">Reach the village row at the top to complete a crossing — 10 crossings wins</div></div>
+        </div>
+        <button class="btn btn-primary" onclick="startGame()">BEGIN JOURNEY</button>
+        <div class="best-label" id="start-best">Best: 0 People Helped</div>
+      </div>
+    </div>
+
+    <!-- GAME OVER -->
+    <div class="overlay hidden" id="gameover-screen">
+      <div class="overlay-card">
+        <div class="ov-logo">DROPLET'S JOURNEY</div>
+        <div class="ov-sub">by charity: water</div>
+        <div class="ov-impact">
+          <div class="ov-impact-num" id="go-people">0</div>
+          <div class="ov-impact-label">People received clean water access through your journey</div>
+        </div>
+        <div class="ov-fact" id="go-fact"></div>
+        <button class="btn btn-primary" onclick="startGame()">Play Again</button>
+        <div class="btn-row">
+          <a class="btn btn-secondary" href="https://www.charitywater.org/donate" target="_blank">Donate</a>
+          <button class="btn btn-secondary" onclick="shareScore()">Share</button>
+          <button class="btn btn-secondary" onclick="resetToMenu()">Reset</button>
+        </div>
+        <div class="best-label" id="go-best"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FACT TICKER -->
+  <div id="fact-bar">
+    <span id="fact-text">
+      783 million people lack access to clean water — that is 1 in 10 people on Earth.
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      Women and girls spend 200 million hours every day collecting water.
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      Dirty water and poor sanitation kill more people than war.
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      charity: water has funded over 100,000 water projects across 29 countries.
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      Every $40 donated can give one person clean water for life.
+    </span>
+  </div>
+
+  <!-- D-PAD -->
+  <div id="dpad">
+    <div class="dpad-col">
+      <div></div>
+      <button class="dpad-btn" id="btn-left"  onpointerdown="dpadPress('left')"  onpointerup="dpadRelease()" onpointercancel="dpadRelease()">&#9664;</button>
+      <div></div>
+    </div>
+    <div class="dpad-col">
+      <button class="dpad-btn" id="btn-up"    onpointerdown="dpadPress('up')"    onpointerup="dpadRelease()" onpointercancel="dpadRelease()">&#9650;</button>
+      <div class="dpad-center"></div>
+      <button class="dpad-btn" id="btn-down"  onpointerdown="dpadPress('down')"  onpointerup="dpadRelease()" onpointercancel="dpadRelease()">&#9660;</button>
+    </div>
+    <div class="dpad-col">
+      <div></div>
+      <button class="dpad-btn" id="btn-right" onpointerdown="dpadPress('right')" onpointerup="dpadRelease()" onpointercancel="dpadRelease()">&#9654;</button>
+      <div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* =====================================================
+   DROPLET'S JOURNEY — charity: water
+   Frogger / Crossy Road web game
+   ===================================================== */
+
+const canvas = document.getElementById('game-canvas');
+const ctx    = canvas.getContext('2d');
+const wrap   = document.getElementById('game-wrap');
+
+// ── BRAND COLORS (charity: water official) ──
+const C = {
+  yellow:  '#FFC907',
+  yellow2: '#E6B400',
+  blue:    '#1A73E8',
+  teal:    '#00C2CB',
+  dark:    '#0B1D2E',
+  navy:    '#122840',
+  green:   '#3DAA5C',
+  green2:  '#2D7A46',
+  red:     '#E74C3C',
+  dirt:    '#5C3D1E',
+  dirtl:   '#7B5431',
+  road:    '#1A1A1A',
+  roadl:   '#2E2E2E',
+  water1:  '#0D47A1',
+  water2:  '#1565C0',
+};
+
+// ── DIMENSIONS ──
+let W, H, CELL, PLAYER_SIZE, NUM_LANES;
+
+function resize() {
+  var r = wrap.getBoundingClientRect();
+  W = Math.floor(r.width);
+  H = Math.floor(r.height);
+  if (W < 1 || H < 1) return;
+  canvas.width  = W;
+  canvas.height = H;
+  CELL        = Math.max(38, Math.floor(W / 9));
+  PLAYER_SIZE = CELL * 0.58;
+  NUM_LANES   = Math.max(7, Math.floor(H / CELL));
+}
+
+// ── STATE MACHINE ──
+// 'start'    : title screen, loop not running
+// 'playing'  : normal play
+// 'dying'    : brief freeze after losing life, then respawn or game over
+// 'gameover' : end screen shown
+var gameState  = 'start';
+var score      = 0;
+var bestScore  = parseInt(localStorage.getItem('cw_best') || '0');
+var lives      = 3;
+var crossing   = 1;
+var animId     = null;
+var lastTime   = 0;
+
+// ── PLAYER ──
+var player = { col: 4, row: 0, x: 0, y: 0, tx: 0, ty: 0, animT: 0, moving: false };
+
+// ── LANES ──
+var lanes = [];
+
+// ── EFFECTS ──
+var floatPops  = [];    // { x, y, text, color, age }
+var invincible = false;
+var invTimer   = 0;
+var dyingTimer = 0;
+
+// ── GEOMETRY HELPERS ──
+function laneH()    { return H / lanes.length; }
+function rowY(row)  { return H - (row + 1) * laneH() + laneH() / 2; }
+function colX(col)  { return col * CELL + CELL / 2; }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+// Cross-browser rounded rectangle (avoids ctx.roundRect browser support issues)
+function rrect(x, y, w, h, r) {
+  r = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y,     x + w, y + r,     r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x,     y + h, x,     y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x,     y,     x + r, y,         r);
+  ctx.closePath();
+}
+
+// ── LANE BUILDERS ──
+function buildLanes() {
+  lanes = [];
+  var spd   = 1.0 + (crossing - 1) * 0.18;
+  // Each crossing adds one extra hazard pair (safe + road or water), capped at 4 extras
+  var extras = Math.min(crossing - 1, 4);
+
+  lanes.push(makeSafe(C.green2, C.green));   // start
+
+  // Base hazard set — always present
+  lanes.push(makeRoad(spd));
+  lanes.push(makeSafe(C.dirt, C.dirtl));
+  lanes.push(makeWater(spd));
+  lanes.push(makeSafe(C.dirt, C.dirtl));
+  lanes.push(makeRoad(spd * 1.1));
+
+  // Extra rows added each crossing — alternates road/water
+  for (var e = 0; e < extras; e++) {
+    lanes.push(makeSafe(C.dirt, C.dirtl));
+    if (e % 2 === 0) {
+      lanes.push(makeWater(spd * (0.9 + e * 0.08)));
+    } else {
+      lanes.push(makeRoad(spd * (1.05 + e * 0.08)));
+    }
+  }
+
+  // Pad remaining space with safe rows, then goal
+  while (lanes.length < NUM_LANES - 1) {
+    lanes.push(makeSafe(C.dirt, C.dirtl));
+  }
+  lanes.push(makeGoal());
+}
+
+function makeSafe(c1, c2) {
+  return { type: 'safe', c1: c1, c2: c2, obs: [] };
+}
+
+function makeGoal() {
+  return { type: 'goal', c1: C.green2, c2: C.green, obs: [] };
+}
+
+function makeRoad(spd) {
+  var dir   = Math.random() < 0.5 ? 1 : -1;
+  var count = Math.min(2 + Math.floor(crossing / 2), 5);
+  var obs   = [];
+  for (var i = 0; i < count; i++) {
+    var gap = W / count;
+    obs.push({
+      type:  'truck',
+      x:     gap * i + Math.random() * gap * 0.5,
+      speed: spd * dir * (0.85 + Math.random() * 0.3),
+      w:     CELL * 1.75,
+    });
+  }
+  return { type: 'road', c1: C.road, c2: C.roadl, obs: obs };
+}
+
+function makeWater(spd) {
+  var dir = Math.random() < 0.5 ? 1 : -1;
+  var obs = [];
+  var positions = [0, W / 3, W * 2 / 3];
+  for (var i = 0; i < positions.length; i++) {
+    var isJerry = (i === 1) && (Math.random() < 0.5);
+    obs.push({
+      type:  isJerry ? 'jerry' : 'log',
+      x:     positions[i],
+      speed: spd * dir * 0.58,
+      w:     isJerry ? CELL * 1.0 : CELL * 2.4,
+    });
+  }
+  return { type: 'water', c1: C.water1, c2: C.water2, obs: obs };
+}
+
+// ── PLAYER HELPERS ──
+function snapPlayer() {
+  player.x     = colX(player.col);
+  player.y     = rowY(player.row);
+  player.tx    = player.x;
+  player.ty    = player.y;
+  player.moving = false;
+  player.animT  = 0;
+}
+
+function spawnPlayer() {
+  player.col = Math.floor((W / CELL) / 2);
+  player.row = 0;
+  snapPlayer();
+}
+
+// ── MOVEMENT ──
+function tryMove(dir) {
+  if (gameState !== 'playing') return;
+  if (player.moving) return;
+
+  var nc = player.col;
+  var nr = player.row;
+
+  if (dir === 'up')    nr = nr + 1;
+  if (dir === 'down')  nr = Math.max(0, nr - 1);
+  if (dir === 'left')  nc = nc - 1;
+  if (dir === 'right') nc = nc + 1;
+
+  var maxCol = Math.floor(W / CELL) - 1;
+  if (nc < 0 || nc > maxCol) return;
+  nr = clamp(nr, 0, lanes.length - 1);
+
+  player.row    = nr;
+  player.col    = nc;
+  player.tx     = colX(nc);
+  player.ty     = rowY(nr);
+  player.moving = true;
+  player.animT  = 0;
+}
+
+// ── UPDATE ──
+function update(dt) {
+
+  // Age float pops regardless of state
+  floatPops = floatPops.filter(function(p) {
+    p.age += dt;
+    return p.age < 0.85;
+  });
+
+  // DYING STATE — wait then respawn or end
+  if (gameState === 'dying') {
+    dyingTimer -= dt;
+    moveObstacles(dt);
+    if (dyingTimer <= 0) {
+      if (lives <= 0) {
+        showGameOver(false);
+      } else {
+        gameState  = 'playing';
+        invincible = true;
+        invTimer   = 1.8;
+        spawnPlayer();
+      }
+    }
+    return;
+  }
+
+  // TRANSITIONING — keep obstacles moving but no player logic
+  if (gameState === 'transitioning') {
+    moveObstacles(dt);
+    return;
+  }
+
+  if (gameState !== 'playing') return;
+
+  // Invincibility countdown
+  if (invincible) {
+    invTimer -= dt;
+    if (invTimer <= 0) {
+      invincible = false;
+      invTimer   = 0;
+    }
+  }
+
+  // Animate player hop
+  if (player.moving) {
+    player.animT = Math.min(1, player.animT + dt * 9);
+    player.x = lerp(player.x, player.tx, player.animT);
+    player.y = lerp(player.y, player.ty, player.animT);
+    if (player.animT >= 1) {
+      player.x      = player.tx;
+      player.y      = player.ty;
+      player.moving = false;
+      onLand();
+    }
+  }
+
+  // Move all obstacles
+  moveObstacles(dt);
+
+  // While standing still on water: ride float or die
+  if (!player.moving && !invincible) {
+    var wlane = lanes[player.row];
+    if (wlane && wlane.type === 'water') {
+      var onFloat = false;
+      for (var wi = 0; wi < wlane.obs.length; wi++) {
+        var wobj = wlane.obs[wi];
+        if (playerOnFloat(wobj)) {
+          player.x  += wobj.speed * dt * 60;
+          player.tx  = player.x;
+          player.col = Math.round(player.x / CELL);
+          onFloat = true;
+          break;
+        }
+      }
+      if (!onFloat) {
+        triggerDeath('You fell into the polluted river!');
+        return;
+      }
+      if (player.x < 0 || player.x > W) {
+        triggerDeath('The current swept you away!');
+        return;
+      }
+    }
+  }
+
+  // While standing still on road: continuous truck collision
+  if (!player.moving && !invincible) {
+    var rlane = lanes[player.row];
+    if (rlane && rlane.type === 'road') {
+      for (var ri = 0; ri < rlane.obs.length; ri++) {
+        if (truckHitsPlayer(rlane.obs[ri])) {
+          triggerDeath('A pollution truck hit you!');
+          return;
+        }
+      }
+    }
+  }
+}
+
+function moveObstacles(dt) {
+  for (var i = 0; i < lanes.length; i++) {
+    var lane = lanes[i];
+    for (var j = 0; j < lane.obs.length; j++) {
+      var obj = lane.obs[j];
+      obj.x += obj.speed * dt * 60;
+      if (obj.x >  W + obj.w * 1.5) obj.x = -obj.w;
+      if (obj.x < -obj.w * 1.5)     obj.x =  W + obj.w;
+    }
+  }
+}
+
+// ── COLLISION ──
+function playerOnFloat(obj) {
+  var margin = 5;
+  return player.x > obj.x + margin && player.x < obj.x + obj.w - margin;
+}
+
+function truckHitsPlayer(obj) {
+  var ph = PLAYER_SIZE * 0.42;
+  return (player.x + ph > obj.x) && (player.x - ph < obj.x + obj.w);
+}
+
+// ── ON LAND ──
+function onLand() {
+  // Don't process if death already triggered during this hop
+  if (gameState !== 'playing') return;
+
+  var lane = lanes[player.row];
+  if (!lane) return;
+
+  if (lane.type === 'goal') {
+    completeCrossing();
+    return;
+  }
+
+  if (lane.type === 'road' && !invincible) {
+    for (var i = 0; i < lane.obs.length; i++) {
+      if (truckHitsPlayer(lane.obs[i])) {
+        triggerDeath('A pollution truck hit you!');
+        return;
+      }
+    }
+  }
+
+  if (lane.type === 'water' && !invincible) {
+    // Must land on a float — check immediately, no grace period
+    var onFloat = false;
+    for (var j = 0; j < lane.obs.length; j++) {
+      if (playerOnFloat(lane.obs[j])) {
+        onFloat = true;
+        if (lane.obs[j].type === 'jerry') {
+          collectJerry(lane.obs[j]);
+        }
+        break;
+      }
+    }
+    if (!onFloat) {
+      triggerDeath('You fell into the polluted river!');
+    }
+  }
+}
+
+// ── GAME EVENTS ──
+function completeCrossing() {
+  score    += 10;
+  crossing += 1;
+  // Block all input/collision during transition
+  gameState = 'transitioning';
+  updateHUD();
+  doFlash(C.green, 200);
+  spawnPop(player.x, player.y, '+10 People Helped', C.yellow);
+  showBanner('Crossing complete! +10 People Helped');
+
+  if (crossing > 10) {
+    launchConfetti();
+    setTimeout(function() { showGameOver(true); }, 600);
+    return;
+  }
+
+  setTimeout(function() {
+    buildLanes();
+    spawnPlayer();
+    updateHUD();
+    gameState = 'playing';
+  }, 420);
+}
+
+function collectJerry(obj) {
+  obj.type = 'log';
+  obj.w    = CELL * 2.4;
+  score   += 5;
+  updateHUD();
+  doFlash(C.yellow, 160);
+  spawnPop(player.x, player.y, '+5 Jerry Can Bonus!', C.yellow);
+  showBanner('Jerry can collected! +5 People Helped');
+}
+
+function triggerDeath(msg) {
+  if (invincible) return;
+  if (gameState === 'dying' || gameState === 'transitioning' || gameState === 'gameover') return;
+  lives     -= 1;
+  gameState  = 'dying';
+  dyingTimer = 0.9;
+  player.moving = false;
+  updateHUD();
+  doFlash(C.red, 320);
+  spawnPop(player.x, player.y, '-1 Life', C.red);
+  showBanner(msg);
+}
+
+// ── HUD ──
+function updateHUD() {
+  var pill = document.getElementById('score-pill');
+  pill.textContent = score + ' Helped';
+  pill.classList.add('pop');
+  setTimeout(function() { pill.classList.remove('pop'); }, 220);
+
+  document.getElementById('cross-pill').textContent = 'Cross ' + crossing;
+
+  for (var i = 1; i <= 3; i++) {
+    var el = document.getElementById('h' + i);
+    el.className = 'heart' + (i <= lives ? '' : ' empty');
+  }
+}
+
+// ── BANNER ──
+var bannerTimeout = null;
+function showBanner(msg) {
+  var b = document.getElementById('milestone-banner');
+  b.textContent = msg;
+  b.classList.add('show');
+  clearTimeout(bannerTimeout);
+  bannerTimeout = setTimeout(function() { b.classList.remove('show'); }, 2400);
+}
+
+// ── FLASH ──
+function doFlash(color, ms) {
+  var el = document.getElementById('flash');
+  el.style.background = color;
+  el.style.opacity = '0.28';
+  setTimeout(function() { el.style.opacity = '0'; }, ms);
+}
+
+// ── FLOAT POPS ──
+function spawnPop(x, y, text, color) {
+  floatPops.push({ x: x, y: y, text: text, color: color, age: 0 });
+}
+
+// ── CONFETTI ──
+function launchConfetti() {
+  var colors = [C.yellow, C.teal, C.green, C.blue, '#FF8A65', '#80DEEA'];
+  var gw = document.getElementById('game-wrap');
+  for (var i = 0; i < 90; i++) {
+    (function() {
+      var el   = document.createElement('div');
+      var size = 6 + Math.random() * 10;
+      el.className = 'confetti-piece';
+      el.style.left              = (Math.random() * 100) + '%';
+      el.style.top               = '-14px';
+      el.style.width             = size + 'px';
+      el.style.height            = size + 'px';
+      el.style.background        = colors[Math.floor(Math.random() * colors.length)];
+      el.style.borderRadius      = Math.random() > 0.5 ? '50%' : '2px';
+      el.style.animationDuration = (1.4 + Math.random() * 2.2) + 's';
+      el.style.animationDelay    = (Math.random() * 0.7) + 's';
+      gw.appendChild(el);
+      setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 4200);
+    })();
+  }
+}
+
+// ── DRAW ──
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  if (gameState === 'start') return;
+
+  var lh = laneH();
+  for (var i = 0; i < lanes.length; i++) {
+    drawLane(lanes[i], H - (i + 1) * lh, lh, i);
+  }
+
+  drawPlayer();
+  drawPops();
+}
+
+function drawLane(lane, y, h, idx) {
+  // Background
+  var grad = ctx.createLinearGradient(0, y, 0, y + h);
+  grad.addColorStop(0, lane.c1);
+  grad.addColorStop(1, lane.c2);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, y, W, h);
+
+  if (lane.type === 'road') {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([14, 12]);
+    ctx.beginPath();
+    ctx.moveTo(0, y + h * 0.5);
+    ctx.lineTo(W, y + h * 0.5);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.font = 'bold ' + Math.floor(h * 0.26) + 'px Nunito';
+    ctx.textAlign = 'right';
+    ctx.fillText('POLLUTION CONVOY', W - 6, y + h * 0.66);
+  }
+
+  if (lane.type === 'water') {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(100,180,255,0.12)';
+    ctx.lineWidth = 2;
+    for (var row = 0; row < 2; row++) {
+      var wy = y + h * (row === 0 ? 0.28 : 0.68);
+      ctx.beginPath();
+      for (var wx = 0; wx < W; wx += 28) {
+        ctx.arc(wx + 14, wy, 14, Math.PI, 0);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.font = 'bold ' + Math.floor(h * 0.26) + 'px Nunito';
+    ctx.textAlign = 'right';
+    ctx.fillText('POLLUTED RIVER', W - 6, y + h * 0.66);
+  }
+
+  if (lane.type === 'goal') {
+    // Village houses — no obstacles, just houses
+    var n = 5;
+    for (var gi = 0; gi < n; gi++) {
+      drawHouse((gi + 0.5) * (W / n), y + h / 2, h);
+    }
+    return;
+  }
+
+  if (lane.type === 'safe' && idx === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.font = 'bold ' + Math.floor(h * 0.26) + 'px Nunito';
+    ctx.textAlign = 'left';
+    ctx.fillText('HOME - press UP to start crossing', 8, y + h * 0.66);
+  }
+
+  // Draw obstacles
+  for (var oi = 0; oi < lane.obs.length; oi++) {
+    drawObs(lane.obs[oi], y, h);
+  }
+}
+
+function drawHouse(cx, cy, h) {
+  var s = h * 0.36;
+  // House body
+  ctx.fillStyle = '#C8A97A';
+  ctx.fillRect(cx - s, cy - s * 0.15, s * 2, s * 0.9);
+  // Roof
+  ctx.fillStyle = C.red;
+  ctx.beginPath();
+  ctx.moveTo(cx - s * 1.15, cy - s * 0.15);
+  ctx.lineTo(cx,             cy - s * 1.1);
+  ctx.lineTo(cx + s * 1.15, cy - s * 0.15);
+  ctx.closePath();
+  ctx.fill();
+  // Door
+  ctx.fillStyle = '#7B4F2E';
+  ctx.fillRect(cx - s * 0.2, cy + s * 0.18, s * 0.4, s * 0.57);
+  // Window
+  ctx.fillStyle = '#B8DEFF';
+  ctx.fillRect(cx + s * 0.3, cy - s * 0.05, s * 0.38, s * 0.32);
+  // Yellow dot (well marker)
+  ctx.fillStyle = C.yellow;
+  ctx.beginPath();
+  ctx.arc(cx, cy - s * 1.26, s * 0.17, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawObs(obj, y, h) {
+  var cx = obj.x + obj.w / 2;
+  var cy = y + h / 2;
+
+  if (obj.type === 'truck') {
+    // Truck sits in the middle vertical band of the lane
+    var th  = h * 0.55;           // truck height
+    var ty2 = cy - th / 2;        // truck top y
+    var by2 = ty2 + th;           // truck bottom y
+    var wr  = h * 0.12;           // wheel radius
+    var wcy = by2 + wr * 0.6;     // wheel center y — sits BELOW the body
+
+    var movingRight = obj.speed > 0;
+    var trailerW = obj.w * 0.62;
+    var cabW     = obj.w * 0.36;
+    var trailerX = movingRight ? obj.x : obj.x + cabW;
+    var cabX     = movingRight ? obj.x + trailerW : obj.x;
+
+    // Trailer
+    ctx.fillStyle = '#4A4A4A';
+    rrect(trailerX, ty2, trailerW, th, 4);
+    ctx.fill();
+
+    // Trailer side detail lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 1;
+    for (var li = 1; li < 4; li++) {
+      ctx.beginPath();
+      ctx.moveTo(trailerX + trailerW * (li / 4), ty2 + th * 0.15);
+      ctx.lineTo(trailerX + trailerW * (li / 4), ty2 + th * 0.85);
+      ctx.stroke();
+    }
+
+    // Cab
+    ctx.fillStyle = '#C0392B';
+    rrect(cabX, ty2, cabW, th, 4);
+    ctx.fill();
+
+    // Windshield
+    var wsX = movingRight ? cabX + cabW * 0.08 : cabX + cabW * 0.08;
+    ctx.fillStyle = 'rgba(160,220,255,0.5)';
+    ctx.fillRect(wsX, ty2 + th * 0.1, cabW * 0.84, th * 0.38);
+
+    // Cab grill / bumper
+    ctx.fillStyle = '#888';
+    var grillX = movingRight ? cabX + cabW - 4 : cabX;
+    ctx.fillRect(grillX, ty2 + th * 0.55, 4, th * 0.35);
+
+    // Wheels — drawn BELOW the body so they're always visible
+    ctx.fillStyle = '#1A1A1A';
+    var wheelPositions = movingRight
+      ? [trailerX + trailerW * 0.18, trailerX + trailerW * 0.7, cabX + cabW * 0.55]
+      : [cabX + cabW * 0.45, trailerX + trailerW * 0.3, trailerX + trailerW * 0.82];
+
+    for (var wi = 0; wi < wheelPositions.length; wi++) {
+      ctx.beginPath();
+      ctx.arc(wheelPositions[wi], wcy, wr, 0, Math.PI * 2);
+      ctx.fill();
+      // Wheel hub
+      ctx.fillStyle = '#555';
+      ctx.beginPath();
+      ctx.arc(wheelPositions[wi], wcy, wr * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#1A1A1A';
+    }
+
+    // Danger X on trailer
+    ctx.strokeStyle = 'rgba(255,80,80,0.7)';
+    ctx.lineWidth   = Math.max(1.5, h * 0.055);
+    ctx.lineCap     = 'round';
+    var mx  = trailerX + trailerW * 0.5;
+    var ms  = th * 0.22;
+    ctx.beginPath(); ctx.moveTo(mx - ms, cy - ms); ctx.lineTo(mx + ms, cy + ms); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mx + ms, cy - ms); ctx.lineTo(mx - ms, cy + ms); ctx.stroke();
+
+  } else if (obj.type === 'log') {
+    var lh2 = h * 0.38;
+    ctx.fillStyle = '#6B4C14';
+    rrect(obj.x, cy - lh2 / 2, obj.w, lh2, 8);
+    ctx.fill();
+    ctx.fillStyle = '#8C6820';
+    rrect(obj.x + 4, cy - lh2 * 0.3, obj.w - 8, lh2 * 0.6, 5);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(40,20,0,0.22)';
+    ctx.lineWidth = 1;
+    for (var lx = obj.x + 18; lx < obj.x + obj.w - 10; lx += 18) {
+      ctx.beginPath();
+      ctx.moveTo(lx, cy - lh2 * 0.4);
+      ctx.lineTo(lx, cy + lh2 * 0.4);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.font = 'bold ' + Math.floor(h * 0.22) + 'px Nunito';
+    ctx.textAlign = 'center';
+    ctx.fillText('LOG RAFT', obj.x + obj.w / 2, cy + h * 0.1);
+
+  } else if (obj.type === 'jerry') {
+    var jr  = h * 0.36;
+    var jx  = cx - jr * 0.55;
+    var jy  = cy - jr;
+    // Can body
+    ctx.fillStyle = C.yellow;
+    rrect(jx, jy, jr * 1.1, jr * 1.9, 6);
+    ctx.fill();
+    // Highlight stripe
+    ctx.fillStyle = C.yellow2;
+    ctx.fillRect(jx + jr * 0.12, jy + jr * 0.1, jr * 0.22, jr * 1.6);
+    // Handle
+    ctx.fillStyle = C.yellow2;
+    ctx.fillRect(jx + jr * 0.22, jy - jr * 0.26, jr * 0.62, jr * 0.2);
+    // Label
+    ctx.fillStyle = C.dark;
+    ctx.font = 'bold ' + Math.floor(h * 0.18) + 'px Nunito';
+    ctx.textAlign = 'center';
+    ctx.fillText('JERRY', cx, cy + h * 0.08);
+  }
+}
+
+function drawPlayer() {
+  if (gameState === 'dying') return;
+  if (invincible && Math.floor(Date.now() / 130) % 2 === 0) return;
+
+  var px = player.x;
+  var py = player.y;
+  var r  = PLAYER_SIZE / 2;  // radius of the circle base
+
+  // The droplet is: a full circle for the body + a pointed tip above it.
+  // Circle center sits at py, tip points upward.
+  var circleX = px;
+  var circleY = py + r * 0.15;  // push circle slightly down so tip has room
+  var tipX    = px;
+  var tipY    = py - r * 1.1;   // tip above the circle
+
+  // ── Shadow ──
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.beginPath();
+  ctx.ellipse(circleX, circleY + r + 3, r * 0.55, r * 0.12, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ── Body: full circle ── (drawn first, always solid)
+  ctx.beginPath();
+  ctx.arc(circleX, circleY, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#1A73E8';
+  ctx.fill();
+
+  // ── Tip: triangle with curved sides connecting to top of circle ──
+  // Top of circle = circleY - r
+  var topY = circleY - r;
+  // The tip connects from the top-left edge of the circle, up to the tip, and back down
+  ctx.beginPath();
+  ctx.moveTo(tipX, tipY);
+  ctx.quadraticCurveTo(px - r * 0.55, py - r * 0.3, circleX - r * 0.52, topY + r * 0.15);
+  ctx.arc(circleX, circleY, r, Math.PI + 0.55, Math.PI * 2 - 0.55, false);
+  ctx.quadraticCurveTo(px + r * 0.55, py - r * 0.3, tipX, tipY);
+  ctx.closePath();
+  ctx.fillStyle = '#1A73E8';
+  ctx.fill();
+
+  // ── Gradient sheen on circle ──
+  var sheen = ctx.createRadialGradient(
+    circleX - r * 0.3, circleY - r * 0.35, r * 0.05,
+    circleX, circleY, r
+  );
+  sheen.addColorStop(0,   'rgba(150,220,255,0.55)');
+  sheen.addColorStop(0.5, 'rgba(26,115,232,0.0)');
+  sheen.addColorStop(1,   'rgba(10,50,140,0.35)');
+  ctx.beginPath();
+  ctx.arc(circleX, circleY, r, 0, Math.PI * 2);
+  ctx.fillStyle = sheen;
+  ctx.fill();
+
+  // ── Glint ──
+  ctx.beginPath();
+  ctx.ellipse(circleX - r * 0.28, circleY - r * 0.38, r * 0.12, r * 0.19, -0.5, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  ctx.fill();
+
+  // ── Face ──
+  var ey = circleY + r * 0.04;
+
+  // Eyes — white
+  ctx.fillStyle = 'white';
+  ctx.beginPath(); ctx.arc(px - r * 0.3, ey, r * 0.16, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(px + r * 0.3, ey, r * 0.16, 0, Math.PI * 2); ctx.fill();
+
+  // Pupils
+  ctx.fillStyle = '#001A44';
+  ctx.beginPath(); ctx.arc(px - r * 0.28, ey + r * 0.02, r * 0.09, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(px + r * 0.28, ey + r * 0.02, r * 0.09, 0, Math.PI * 2); ctx.fill();
+
+  // Eye shine
+  ctx.fillStyle = 'white';
+  ctx.beginPath(); ctx.arc(px - r * 0.22, ey - r * 0.04, r * 0.04, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(px + r * 0.34, ey - r * 0.04, r * 0.04, 0, Math.PI * 2); ctx.fill();
+
+  // Smile
+  ctx.strokeStyle = 'white';
+  ctx.lineWidth   = Math.max(1.5, r * 0.11);
+  ctx.lineCap     = 'round';
+  ctx.beginPath();
+  ctx.arc(px, circleY + r * 0.25, r * 0.28, 0.35, Math.PI - 0.35);
+  ctx.stroke();
+}
+
+// ── CHARITY: WATER LOGO IN CORNER ──
+
+function drawPops() {
+  var lh = laneH();
+  for (var i = 0; i < floatPops.length; i++) {
+    var p = floatPops[i];
+    var t = p.age / 0.85;
+    ctx.globalAlpha = Math.max(0, 1 - t);
+    ctx.fillStyle   = p.color;
+    ctx.font        = 'bold ' + Math.floor(lh * 0.3) + 'px Righteous';
+    ctx.textAlign   = 'center';
+    ctx.fillText(p.text, p.x, p.y - t * 52);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── GAME LOOP ──
+function loop(ts) {
+  var dt = Math.min((ts - lastTime) / 1000, 0.05);
+  lastTime = ts;
+  update(dt);
+  draw();
+  animId = requestAnimationFrame(loop);
+}
+
+function startLoop() {
+  if (animId) cancelAnimationFrame(animId);
+  lastTime = performance.now();
+  animId   = requestAnimationFrame(loop);
+}
+
+// ── GAME FLOW ──
+function startGame() {
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('gameover-screen').classList.add('hidden');
+
+  score      = 0;
+  lives      = 3;
+  crossing   = 1;
+  invincible = false;
+  invTimer   = 0;
+  floatPops  = [];
+
+  resize();
+  buildLanes();
+  spawnPlayer();
+  updateHUD();
+
+  gameState = 'playing';
+  startLoop();
+}
+
+function resetToMenu() {
+  if (animId) { cancelAnimationFrame(animId); animId = null; }
+  gameState = 'start';
+  document.getElementById('gameover-screen').classList.add('hidden');
+  document.getElementById('start-screen').classList.remove('hidden');
+  document.getElementById('start-best').textContent = 'Best: ' + bestScore + ' People Helped';
+  ctx.fillStyle = C.dark;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function showGameOver(won) {
+  gameState = 'gameover';
+  if (animId) { cancelAnimationFrame(animId); animId = null; }
+  if (score > bestScore) {
+    bestScore = score;
+    localStorage.setItem('cw_best', bestScore);
+  }
+
+  document.getElementById('go-people').textContent = score + (won ? ' — YOU WIN!' : '');
+  document.getElementById('go-best').textContent   = 'Personal Best: ' + bestScore + ' People Helped';
+
+  var facts = [
+    'Your ' + (crossing - 1) + ' crossings represent villages that once walked miles every day for water.',
+    'Each well charity: water builds serves around 300 people for over 20 years.',
+    'In Sub-Saharan Africa, water collection consumes 40 billion hours per year.',
+    'Clean water access reduces child mortality by up to 50 percent.',
+    'charity: water has served over 17 million people with clean water since 2006.',
+  ];
+  document.getElementById('go-fact').textContent =
+    facts[Math.floor(Math.random() * facts.length)];
+
+  if (won) {
+    launchConfetti();
+    showBanner('You completed all 10 crossings — YOU WIN!');
+  }
+
+  document.getElementById('gameover-screen').classList.remove('hidden');
+}
+
+function shareScore() {
+  var text = 'I just helped ' + score + ' people get clean water in Droplets Journey! Support charity: water at charitywater.org';
+  if (navigator.share) {
+    navigator.share({ title: "Droplet's Journey", text: text });
+  } else {
+    navigator.clipboard.writeText(text)
+      .then(function() { alert('Score copied to clipboard — share it!'); })
+      .catch(function() { alert('Score: ' + score + ' People Helped — visit charitywater.org to make a difference.'); });
+  }
+}
+
+// ── KEYBOARD ──
+var keysDown = {};
+document.addEventListener('keydown', function(e) {
+  if (keysDown[e.key]) return;
+  keysDown[e.key] = true;
+  var map = {
+    ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
+    w:'up', s:'down', a:'left', d:'right',
+    W:'up', S:'down', A:'left', D:'right',
+  };
+  if (map[e.key]) { e.preventDefault(); tryMove(map[e.key]); }
+});
+document.addEventListener('keyup', function(e) { keysDown[e.key] = false; });
+
+// ── D-PAD ──
+function dpadPress(dir) {
+  document.querySelectorAll('.dpad-btn').forEach(function(b) { b.classList.remove('pressed'); });
+  var ids = { up:'btn-up', down:'btn-down', left:'btn-left', right:'btn-right' };
+  var el = document.getElementById(ids[dir]);
+  if (el) el.classList.add('pressed');
+  tryMove(dir);
+}
+function dpadRelease() {
+  document.querySelectorAll('.dpad-btn').forEach(function(b) { b.classList.remove('pressed'); });
+}
+
+// ── SWIPE ──
+var touchOrigin = null;
+canvas.addEventListener('touchstart', function(e) {
+  touchOrigin = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+}, { passive: true });
+canvas.addEventListener('touchend', function(e) {
+  if (!touchOrigin) return;
+  var dx = e.changedTouches[0].clientX - touchOrigin.x;
+  var dy = e.changedTouches[0].clientY - touchOrigin.y;
+  touchOrigin = null;
+  if (Math.abs(dx) < 14 && Math.abs(dy) < 14) return;
+  if (Math.abs(dx) > Math.abs(dy)) { tryMove(dx > 0 ? 'right' : 'left'); }
+  else { tryMove(dy > 0 ? 'down' : 'up'); }
+}, { passive: true });
+
+// ── RESIZE ──
+window.addEventListener('resize', function() {
+  resize();
+  if (gameState === 'playing' || gameState === 'dying') {
+    buildLanes();
+    spawnPlayer();
+    updateHUD();
+  }
+});
+
+// ── INIT ──
+resize();
+document.getElementById('start-best').textContent = 'Best: ' + bestScore + ' People Helped';
+ctx.fillStyle = C.dark;
+ctx.fillRect(0, 0, W, H);
+</script>
+</body>
+</html>
